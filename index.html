@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>📱 Singapore Telecom ম্যানেজমেন্ট</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0D1117; color: #E6EDF3; font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; }
+  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #161B22; } ::-webkit-scrollbar-thumb { background: #30363D; border-radius: 3px; }
+  input, select { background: #161B22; border: 1px solid #30363D; border-radius: 6px; padding: 8px 12px; color: #E6EDF3; font-size: 13px; outline: none; width: 100%; }
+  input:focus, select:focus { border-color: #00D4FF; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 10px 12px; font-size: 11px; color: #8B949E; text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1px solid #30363D; }
+  td { padding: 10px 12px; border-bottom: 1px solid #30363D; font-size: 13px; color: #E6EDF3; }
+  tr:hover td { background: #1C2230; }
+
+  /* Mobile sidebar */
+  @media (max-width: 600px) {
+    #sidebar { width: 100% !important; height: auto !important; position: relative !important; flex-direction: row !important; flex-wrap: wrap; padding: 10px !important; }
+    #sidebar .logo { display: none; }
+    #main { margin-left: 0 !important; }
+    .nav-item { padding: 8px 12px !important; font-size: 12px !important; }
+    .stat-row { flex-direction: column; }
+  }
+</style>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// ── FIREBASE ──────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyBK4Euao4_YXpWJcFLkEI4JV3FSefU48w",
+  authDomain: "singapure-telecom.firebaseapp.com",
+  projectId: "singapure-telecom",
+  storageBucket: "singapure-telecom.firebasestorage.app",
+  messagingSenderId: "655884672647",
+  appId: "1:655884672647:web:5aa8f6176dbf0c6bafe222"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+const ADMIN_EMAILS = ["admin@sgtelecom.com","robin@sgtelecom.com"];
+const isAdmin = (email) => ADMIN_EMAILS.includes(email);
+const getBranchId = (email) => {
+  if(ADMIN_EMAILS.includes(email)) return "admin";
+  return email.split("@")[0]; // branch1, branch2 etc
+};
+
+// ── LOGIN PAGE ────────────────────────────────────────────
+// ডিফল্ট শাখা তালিকা — Firebase থেকে আপডেট হবে
+const DEFAULT_BRANCHES = [
+  { label:"শাখা ১",  icon:"🏪", email:"branch1@sgtelecom.com", color:"#00D4FF" },
+  { label:"শাখা ২",  icon:"🏪", email:"branch2@sgtelecom.com", color:"#3FB950" },
+  { label:"Robin",   icon:"👤", email:"robin@sgtelecom.com",   color:"#F0A500" },
+  { label:"Admin",   icon:"👑", email:"admin@sgtelecom.com",   color:"#F85149" },
+];
+const ICON_OPTIONS = ["🏪","👤","🏬","📱","💼","🔧","⭐","🌟"];
+const COLOR_OPTIONS = ["#00D4FF","#3FB950","#F0A500","#F85149","#A371F7","#FF6B6B","#4ECDC4","#FFE66D"];
+
+function LoginPage(){
+  const [selected,setSelected]=useState(null);
+  const [pass,setPass]=useState("");
+  const [error,setError]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [branches,setBranches]=useState(DEFAULT_BRANCHES);
+
+  // Firebase থেকে শাখা তালিকা লোড করো
+  useEffect(()=>{
+    db.collection("config").doc("branches").get().then(doc=>{
+      if(doc.exists && doc.data().list){
+        setBranches(doc.data().list);
+      }
+    }).catch(()=>{});
+  },[]);
+
+  const selectBranch=(branch)=>{ setSelected(branch); setPass(""); setError(""); };
+
+  const login=async()=>{
+    if(!selected||!pass) return setError("পাসওয়ার্ড দিন!");
+    setLoading(true); setError("");
+    try{
+      await auth.signInWithEmailAndPassword(selected.email, pass);
+    }catch(e){
+      setError("পাসওয়ার্ড ভুল! আবার চেষ্টা করুন।");
+    }
+    setLoading(false);
+  };
+
+  return <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+    <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:36,width:460,maxWidth:"95vw"}}>
+      <div style={{textAlign:"center",marginBottom:28}}>
+        <div style={{fontSize:52,marginBottom:8}}>📱</div>
+        <div style={{fontSize:22,fontWeight:700,color:C.accent}}>Singapore Telecom</div>
+        <div style={{color:C.muted,fontSize:13,marginTop:4}}>আপনার অ্যাকাউন্ট বেছে নিন</div>
+      </div>
+
+      {!selected && <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        {branches.map(b=>(
+          <div key={b.email} onClick={()=>selectBranch(b)}
+            style={{background:C.surface,border:`2px solid ${C.border}`,borderRadius:12,padding:"20px 12px",textAlign:"center",cursor:"pointer",transition:"all 0.15s"}}
+            onMouseEnter={e=>{ e.currentTarget.style.borderColor=b.color; e.currentTarget.style.background=b.color+"11"; }}
+            onMouseLeave={e=>{ e.currentTarget.style.borderColor=C.border; e.currentTarget.style.background=C.surface; }}>
+            <div style={{fontSize:36,marginBottom:8}}>{b.icon}</div>
+            <div style={{fontWeight:700,fontSize:14,color:C.text}}>{b.label}</div>
+          </div>
+        ))}
+      </div>}
+
+      {selected && <div>
+        <div style={{display:"flex",alignItems:"center",gap:12,background:C.surface,border:`2px solid ${selected.color}`,borderRadius:12,padding:"14px 16px",marginBottom:20}}>
+          <span style={{fontSize:32}}>{selected.icon}</span>
+          <div>
+            <div style={{fontWeight:700,color:selected.color,fontSize:15}}>{selected.label}</div>
+            <div style={{fontSize:11,color:C.muted}}>{selected.email}</div>
+          </div>
+          <button onClick={()=>setSelected(null)} style={{marginLeft:"auto",background:"none",border:"none",color:C.muted,fontSize:20,cursor:"pointer"}}>✕</button>
+        </div>
+        {error && <div style={{background:C.danger+"22",border:`1px solid ${C.danger}`,borderRadius:6,padding:"10px 14px",color:C.danger,fontSize:13,marginBottom:14}}>{error}</div>}
+        <label style={{fontSize:12,color:C.muted,display:"block",marginBottom:6}}>পাসওয়ার্ড</label>
+        <input value={pass} onChange={e=>setPass(e.target.value)} placeholder="পাসওয়ার্ড লিখুন" type="password"
+          autoFocus onKeyDown={e=>e.key==="Enter"&&login()}
+          style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:6,padding:"12px 14px",color:C.text,fontSize:14,width:"100%",boxSizing:"border-box",marginBottom:16}}/>
+        <button onClick={login} disabled={loading}
+          style={{width:"100%",padding:12,borderRadius:8,border:"none",background:selected.color,color:C.bg,fontWeight:700,fontSize:15,cursor:"pointer"}}>
+          {loading?"লোড হচ্ছে...":"🔐 প্রবেশ করুন"}
+        </button>
+      </div>}
+    </div>
+  </div>;
+}
+
+// ── BRANCH MANAGER (Admin only) ───────────────────────────
+function BranchManager(){
+  const [branches,setBranches]=useState(DEFAULT_BRANCHES);
+  const [showAdd,setShowAdd]=useState(false);
+  const [form,setForm]=useState({label:"",email:"",icon:"🏪",color:"#00D4FF"});
+  const [saving,setSaving]=useState(false);
+  const f=(k,v)=>setForm(prev=>({...prev,[k]:v}));
+
+  useEffect(()=>{
+    db.collection("config").doc("branches").get().then(doc=>{
+      if(doc.exists && doc.data().list) setBranches(doc.data().list);
+    });
+  },[]);
+
+  const saveBranches=async(list)=>{
+    setSaving(true);
+    await db.collection("config").doc("branches").set({list});
+    setBranches(list);
+    setSaving(false);
+  };
+
+  const addBranch=async()=>{
+    if(!form.label||!form.email) return alert("নাম ও ইমেইল দিন!");
+    const newList=[...branches,{...form}];
+    await saveBranches(newList);
+    setShowAdd(false);
+    setForm({label:"",email:"",icon:"🏪",color:"#00D4FF"});
+  };
+
+  const deleteBranch=async(email)=>{
+    if(!window.confirm("এই শাখা মুছে ফেলবেন?")) return;
+    const newList=branches.filter(b=>b.email!==email);
+    await saveBranches(newList);
+  };
+
+  return <div>
+    <div style={s.pageTitle}>🏢 শাখা ম্যানেজমেন্ট</div>
+    <div style={s.pageSub}>লগইন পেজে যে শাখাগুলো দেখাবে সেগুলো এখান থেকে নিয়ন্ত্রণ করুন</div>
+
+    <div style={{display:"flex",gap:12,marginBottom:16}}>
+      <button style={s.btn("primary")} onClick={()=>setShowAdd(true)}>+ নতুন শাখা যোগ</button>
+      {saving && <span style={{color:C.muted,fontSize:13,padding:"8px 0"}}>সেভ হচ্ছে...</span>}
+    </div>
+
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:12,marginBottom:20}}>
+      {branches.map(b=>(
+        <div key={b.email} style={{...s.card,textAlign:"center",position:"relative",borderColor:b.color+"55"}}>
+          <div style={{fontSize:36,marginBottom:6}}>{b.icon}</div>
+          <div style={{fontWeight:700,color:b.color}}>{b.label}</div>
+          <div style={{fontSize:11,color:C.muted,marginBottom:10,wordBreak:"break-all"}}>{b.email}</div>
+          <button style={{...s.btn("danger"),padding:"4px 10px",fontSize:11}} onClick={()=>deleteBranch(b.email)}>🗑️ মুছুন</button>
+        </div>
+      ))}
+    </div>
+
+    <Modal open={showAdd} onClose={()=>setShowAdd(false)} title="নতুন শাখা যোগ করুন">
+      <label style={s.label}>শাখার নাম</label>
+      <input value={form.label} onChange={e=>f("label",e.target.value)} placeholder="যেমন: শাখা ৩"/>
+      <label style={s.label}>ইমেইল (Firebase এ আগে তৈরি করা)</label>
+      <input value={form.email} onChange={e=>f("email",e.target.value)} placeholder="যেমন: branch3@sgtelecom.com"/>
+      <label style={s.label}>আইকন বেছে নিন</label>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:4}}>
+        {ICON_OPTIONS.map(ic=>(
+          <div key={ic} onClick={()=>f("icon",ic)}
+            style={{fontSize:28,cursor:"pointer",padding:6,borderRadius:8,border:`2px solid ${form.icon===ic?C.accent:C.border}`,background:form.icon===ic?C.accentDim:"transparent"}}>
+            {ic}
+          </div>
+        ))}
+      </div>
+      <label style={s.label}>রং বেছে নিন</label>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
+        {COLOR_OPTIONS.map(col=>(
+          <div key={col} onClick={()=>f("color",col)}
+            style={{width:32,height:32,borderRadius:"50%",background:col,cursor:"pointer",border:`3px solid ${form.color===col?"#fff":col}`,boxShadow:form.color===col?"0 0 0 2px "+col:"none"}}>
+          </div>
+        ))}
+      </div>
+      <div style={{background:C.surface,borderRadius:8,padding:14,marginBottom:16,textAlign:"center"}}>
+        <div style={{fontSize:36,marginBottom:4}}>{form.icon}</div>
+        <div style={{fontWeight:700,color:form.color}}>{form.label||"শাখার নাম"}</div>
+      </div>
+      <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <button style={s.btn()} onClick={()=>setShowAdd(false)}>বাতিল</button>
+        <button style={s.btn("primary")} onClick={addBranch}>✅ যোগ করুন</button>
+      </div>
+    </Modal>
+  </div>;
+}
+
+
+const C = {
+  bg:"#0D1117", surface:"#161B22", card:"#1C2230", border:"#30363D",
+  accent:"#00D4FF", accentDim:"#0A3A4A", success:"#3FB950",
+  warning:"#F0A500", danger:"#F85149", text:"#E6EDF3", muted:"#8B949E",
+};
+
+const s = {
+  sidebar:{ width:220, background:C.surface, borderRight:`1px solid ${C.border}`, padding:"24px 0", position:"fixed", top:0, left:0, height:"100vh", display:"flex", flexDirection:"column", zIndex:100, overflowY:"auto" },
+  logo:{ padding:"0 20px 20px", borderBottom:`1px solid ${C.border}`, marginBottom:16 },
+  main:{ marginLeft:220, padding:24, minHeight:"100vh" },
+  card:{ background:C.card, border:`1px solid ${C.border}`, borderRadius:10, padding:20, marginBottom:16 },
+  row:{ display:"flex", gap:14, marginBottom:16, flexWrap:"wrap" },
+  btn:(v)=>({ padding:"8px 16px", borderRadius:6, border:"none", cursor:"pointer", fontWeight:600, fontSize:13, background:v==="primary"?C.accent:v==="danger"?C.danger:v==="success"?C.success:C.border, color:v==="primary"?C.bg:C.text }),
+  badge:(c)=>({ display:"inline-block", padding:"2px 8px", borderRadius:20, fontSize:11, fontWeight:600, background:c+"22", color:c }),
+  modal:{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:999 },
+  modalBox:{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:28, width:500, maxWidth:"95vw", maxHeight:"88vh", overflowY:"auto" },
+  label:{ fontSize:12, color:C.muted, marginBottom:4, display:"block", marginTop:12 },
+  secTitle:{ fontSize:15, fontWeight:600, color:C.text, marginBottom:14, paddingBottom:8, borderBottom:`1px solid ${C.border}` },
+  pageTitle:{ fontSize:22, fontWeight:700, marginBottom:4 },
+  pageSub:{ color:C.muted, fontSize:13, marginBottom:22 },
+  grid2:{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 },
+};
+
+const fmt = n => "৳" + Number(n||0).toLocaleString();
+const today = () => new Date().toISOString().slice(0,10);
+
+// ── STORAGE ──────────────────────────────────────────────
+const save = (key, val, branchId) => {
+  try { localStorage.setItem(branchId+"_"+key, JSON.stringify(val)); } catch(e){}
+  const user = auth.currentUser;
+  if(!user) return;
+  const docId = branchId+"_"+key;
+  db.collection("shopdata").doc(docId).set({value:JSON.stringify(val),branch:branchId,updatedAt:new Date()}).catch(e=>console.log(e));
+};
+const load = (key, def, branchId="") => {
+  try { const v = localStorage.getItem(branchId+"_"+key); return v ? JSON.parse(v) : def; } catch(e){ return def; }
+};
+
+const INIT_PRODUCTS = [
+  {id:1,name:"Samsung S21 Screen",category:"Display",buyPrice:1800,stock:15,unit:"পিস"},
+  {id:2,name:"iPhone 13 Battery",category:"Battery",buyPrice:600,stock:30,unit:"পিস"},
+  {id:3,name:"Type-C Charging Port",category:"Charging",buyPrice:120,stock:50,unit:"পিস"},
+  {id:4,name:"Back Cover Glass",category:"Body",buyPrice:200,stock:25,unit:"পিস"},
+];
+const INIT_SALES = [
+  {id:1,date:"2024-06-20",type:"retail",items:[{productId:1,qty:1,price:2500}],total:2500,profit:700},
+];
+const INIT_SERVICES = [
+  {id:1,date:"2024-06-20",customerName:"রফিকুল ইসলাম",phone:"01711-123456",device:"Samsung A32",issue:"স্ক্রিন নষ্ট",status:"completed",charge:1500,cost:800},
+  {id:2,date:"2024-06-21",customerName:"মোঃ আলী",phone:"01812-654321",device:"iPhone 11",issue:"ব্যাটারি সমস্যা",status:"in-progress",charge:800,cost:600},
+  {id:3,date:"2024-06-22",customerName:"সুমাইয়া বেগম",phone:"01912-111222",device:"Xiaomi Note 10",issue:"চার্জিং পোর্ট",status:"pending",charge:400,cost:200},
+];
+const INIT_EXPENSES = [
+  {id:1,date:"2024-06-01",category:"ভাড়া",amount:8000,note:"জুন মাসের দোকান ভাড়া"},
+  {id:2,date:"2024-06-15",category:"বেতন",amount:5000,note:"কর্মচারীর বেতন"},
+];
+
+// ── MODAL ─────────────────────────────────────────────────
+function Modal({open,onClose,title,children}){
+  if(!open) return null;
+  return <div style={s.modal} onClick={onClose}>
+    <div style={s.modalBox} onClick={e=>e.stopPropagation()}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+        <span style={{fontSize:17,fontWeight:700}}>{title}</span>
+        <button onClick={onClose} style={{background:"none",border:"none",color:C.muted,fontSize:22,cursor:"pointer"}}>✕</button>
+      </div>
+      {children}
+    </div>
+  </div>;
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────
+function Dashboard({products,sales,services,expenses}){
+  const totalSales = sales.reduce((a,s)=>a+s.total,0);
+  const totalProfit = sales.reduce((a,s)=>a+s.profit,0);
+  const completedSvc = services.filter(s=>s.status==="completed");
+  const svcIncome = completedSvc.reduce((a,s)=>a+s.charge,0);
+  const svcProfit = completedSvc.reduce((a,s)=>a+(s.charge-s.cost),0);
+  const totalExp = expenses.reduce((a,e)=>a+e.amount,0);
+  const netProfit = totalProfit + svcProfit - totalExp;
+  const lowStock = products.filter(p=>p.stock<=5);
+
+  const totalStockValue=products.reduce((a,p)=>a+(p.buyPrice*p.stock),0);
+  const totalStockQty=products.reduce((a,p)=>a+p.stock,0);
+
+  return <div>
+    <div style={s.pageTitle}>📊 ড্যাশবোর্ড</div>
+    <div style={s.pageSub}>আপনার দোকানের সামগ্রিক অবস্থা এক নজরে</div>
+
+    <div style={s.row}>
+      {[
+        ["মোট আয়", fmt(totalSales+svcIncome), C.accent],
+        ["নিট লাভ", fmt(netProfit), netProfit>=0?C.success:C.danger],
+        ["মোট খরচ", fmt(totalExp), C.warning],
+        ["কম স্টক", lowStock.length+" পণ্য", lowStock.length>0?C.danger:C.success],
+      ].map(([label,val,color])=>(
+        <div key={label} style={{...s.card, flex:1, minWidth:140, borderColor:color+"55", marginBottom:0}}>
+          <div style={{fontSize:24,fontWeight:700,color}}>{val}</div>
+          <div style={{fontSize:11,color:C.muted,textTransform:"uppercase",letterSpacing:0.8,marginTop:4}}>{label}</div>
+        </div>
+      ))}
+    </div>
+
+    {/* স্টক ভ্যালু কার্ড */}
+    <div style={{...s.card,borderColor:C.accent,marginBottom:16,background:"linear-gradient(135deg,#0A3A4A 0%,#1C2230 100%)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:16}}>
+        <div>
+          <div style={{fontSize:12,color:C.accent,textTransform:"uppercase",letterSpacing:0.8,marginBottom:6}}>📦 বর্তমান স্টকের মোট মূল্য</div>
+          <div style={{fontSize:32,fontWeight:700,color:C.accent}}>{fmt(totalStockValue)}</div>
+          <div style={{color:C.muted,fontSize:13,marginTop:4}}>মোট {totalStockQty} পিস পণ্য • {products.length}টি আইটেম</div>
+        </div>
+        <div style={{display:"flex",gap:20,flexWrap:"wrap"}}>
+          {[
+            ["সর্বোচ্চ স্টক",products.length>0?[...products].sort((a,b)=>b.stock-a.stock)[0].name:"—",C.success],
+            ["কম স্টক পণ্য",lowStock.length+" টি",lowStock.length>0?C.danger:C.success],
+          ].map(([label,val,color])=>(
+            <div key={label} style={{textAlign:"center"}}>
+              <div style={{fontSize:16,fontWeight:700,color}}>{val}</div>
+              <div style={{fontSize:11,color:C.muted}}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    <div style={s.row}>
+      <div style={{...s.card,flex:1}}>
+        <div style={s.secTitle}>🔧 সার্ভিস স্ট্যাটাস</div>
+        <div style={{display:"flex",gap:16}}>
+          {[["অপেক্ষায়",C.warning,"pending"],["চলছে",C.accent,"in-progress"],["সম্পন্ন",C.success,"completed"]].map(([label,color,st])=>(
+            <div key={st} style={{textAlign:"center",flex:1}}>
+              <div style={{fontSize:26,fontWeight:700,color}}>{services.filter(x=>x.status===st).length}</div>
+              <div style={{fontSize:12,color:C.muted}}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{...s.card,flex:1}}>
+        <div style={s.secTitle}>💰 আয়ের বিভাজন</div>
+        {[["পার্টস বিক্রয়",totalSales],["সার্ভিস আয়",svcIncome]].map(([label,val])=>(
+          <div key={label} style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+            <span style={{color:C.muted}}>{label}</span>
+            <span style={{fontWeight:600}}>{fmt(val)}</span>
+          </div>
+        ))}
+        <div style={{borderTop:`1px solid ${C.border}`,paddingTop:8,display:"flex",justifyContent:"space-between"}}>
+          <span style={{color:C.accent,fontWeight:600}}>সর্বমোট</span>
+          <span style={{color:C.accent,fontWeight:700}}>{fmt(totalSales+svcIncome)}</span>
+        </div>
+      </div>
+    </div>
+
+    {lowStock.length>0 && <div style={{...s.card,borderColor:C.danger}}>
+      <div style={{...s.secTitle,color:C.danger}}>⚠️ কম স্টক সতর্কতা</div>
+      <div style={s.row}>
+        {lowStock.map(p=>(
+          <div key={p.id} style={{background:C.danger+"11",border:`1px solid ${C.danger}`,borderRadius:8,padding:"10px 14px"}}>
+            <div style={{fontWeight:600}}>{p.name}</div>
+            <div style={{color:C.danger,fontSize:12}}>মাত্র {p.stock} {p.unit} বাকি</div>
+          </div>
+        ))}
+      </div>
+    </div>}
+  </div>;
+}
+
+// ── STOCK ─────────────────────────────────────────────────
+function StockPage({products,setProducts}){
+  const [show,setShow]=useState(false);
+  const [edit,setEdit]=useState(null);
+  const [form,setForm]=useState({name:"",category:"",buyPrice:"",addStock:"",unit:"পিস"});
+  const [search,setSearch]=useState("");
+  const [showSuggest,setShowSuggest]=useState(false);
+
+  const f=(k,v)=>setForm(prev=>({...prev,[k]:v}));
+
+  const openAdd=()=>{
+    setEdit(null);
+    setForm({name:"",category:"",buyPrice:"",addStock:"",unit:"পিস"});
+    setShowSuggest(false);
+    setShow(true);
+  };
+  const openEdit=p=>{
+    setEdit(p);
+    setForm({name:p.name,category:p.category||"",buyPrice:p.buyPrice,addStock:"",unit:p.unit||"পিস"});
+    setShowSuggest(false);
+    setShow(true);
+  };
+
+  const selectSuggestion=(p)=>{
+    setEdit(p);
+    setForm({name:p.name,category:p.category||"",buyPrice:p.buyPrice,addStock:"",unit:p.unit||"পিস"});
+    setShowSuggest(false);
+  };
+
+  const saveItem=()=>{
+    if(!form.name||!form.addStock) return alert("পণ্যের নাম ও পরিমাণ দিন!");
+    let updated;
+    if(edit){
+      updated=products.map(p=>p.id===edit.id
+        ?{...p,name:form.name,category:form.category,buyPrice:+form.buyPrice,unit:form.unit,stock:p.stock+(+form.addStock||0)}
+        :p);
+    } else {
+      const existing=products.findIndex(p=>p.name.trim().toLowerCase()===form.name.trim().toLowerCase());
+      if(existing!==-1){
+        updated=products.map((p,i)=>i===existing
+          ?{...p,stock:p.stock+(+form.addStock||0),buyPrice:+form.buyPrice}
+          :p);
+      } else {
+        updated=[...products,{id:Date.now(),name:form.name,category:form.category,buyPrice:+form.buyPrice,stock:+form.addStock,unit:form.unit}];
+      }
+    }
+    setProducts(updated); save("products",updated); setShow(false);
+  };
+
+  const del=id=>{ if(!window.confirm("মুছে ফেলবেন?")) return; const u=products.filter(p=>p.id!==id); setProducts(u); save("products",u); };
+  const filtered=products.filter(p=>p.name.toLowerCase().includes(search.toLowerCase())||p.category?.toLowerCase().includes(search.toLowerCase()));
+  const suggestions=products.filter(p=>form.name&&p.name.toLowerCase().includes(form.name.toLowerCase()));
+
+  return <div>
+    <div style={s.pageTitle}>📦 স্টক ম্যানেজমেন্ট</div>
+    <div style={s.pageSub}>সকল পণ্য ও পার্টসের ইনভেন্টরি</div>
+    <div style={{display:"flex",gap:12,marginBottom:16,flexWrap:"wrap"}}>
+      <input style={{maxWidth:260}} placeholder="পণ্য খুঁজুন..." value={search} onChange={e=>setSearch(e.target.value)}/>
+      <button style={s.btn("primary")} onClick={openAdd}>+ নতুন স্টক এন্ট্রি</button>
+      <button style={{...s.btn("danger")}} onClick={()=>{
+          if(!window.confirm("একই নামের সব পণ্য একটাতে মার্জ করবেন?")) return;
+          // localStorage থেকে সরাসরি পড়ো
+          let raw=[];
+          try{ raw=JSON.parse(localStorage.getItem("products")||"[]"); }catch(e){}
+          if(raw.length===0) raw=products;
+          const merged=[];
+          raw.forEach(p=>{
+            const idx=merged.findIndex(x=>x.name.trim().toLowerCase()===p.name.trim().toLowerCase());
+            if(idx!==-1){
+              merged[idx].stock=merged[idx].stock+p.stock;
+            } else {
+              merged.push({...p});
+            }
+          });
+          localStorage.setItem("products",JSON.stringify(merged));
+          setProducts(merged);
+          alert("✅ মার্জ সম্পন্ন! পেজ রিলোড হবে।");
+          window.location.reload();
+        }}>🔀 ডুপ্লিকেট মার্জ করুন</button>
+    </div>
+    {filtered.length===0
+      ? <div style={{...s.card,textAlign:"center",padding:30,color:C.muted}}>কোনো পণ্য নেই</div>
+      : (() => {
+          const cats=[...new Set(filtered.map(p=>p.category||"অন্যান্য"))].sort();
+          return cats.map(cat=>{
+            const catProducts=filtered.filter(p=>(p.category||"অন্যান্য")===cat);
+            const catTotal=catProducts.reduce((a,p)=>a+p.buyPrice*p.stock,0);
+            const catQty=catProducts.reduce((a,p)=>a+p.stock,0);
+            return <div key={cat} style={{...s.card,marginBottom:16}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={s.badge(C.accent)}>{cat}</span>
+                  <span style={{color:C.muted,fontSize:12}}>{catProducts.length}টি পণ্য</span>
+                </div>
+                <div style={{display:"flex",gap:16}}>
+                  <div style={{fontSize:12,color:C.muted}}>মোট স্টক: <b style={{color:C.text}}>{catQty} পিস</b></div>
+                  <div style={{fontSize:12,color:C.muted}}>মূল্য: <b style={{color:C.accent}}>{fmt(catTotal)}</b></div>
+                </div>
+              </div>
+              <div style={{overflowX:"auto"}}>
+              <table>
+                <thead><tr>{["পণ্যের নাম","কেনা দাম","স্টক",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
+                <tbody>
+                  {catProducts.map(p=>(
+                    <tr key={p.id}>
+                      <td><b>{p.name}</b></td>
+                      <td>{fmt(p.buyPrice)}</td>
+                      <td><span style={s.badge(p.stock<=5?C.danger:p.stock<=10?C.warning:C.success)}>{p.stock} {p.unit}</span></td>
+                      <td>
+                        <button style={{...s.btn(),padding:"4px 8px",marginRight:4}} onClick={()=>openEdit(p)}>✏️ স্টক যোগ</button>
+                        <button style={{...s.btn("danger"),padding:"4px 8px"}} onClick={()=>del(p.id)}>🗑️</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              </div>
+            </div>;
+          });
+        })()
+    }
+
+    <Modal open={show} onClose={()=>setShow(false)} title={edit?"স্টক যোগ করুন — "+edit.name:"নতুন স্টক এন্ট্রি"}>
+
+      {/* পণ্যের নাম — সাজেশন সহ */}
+      {!edit && <>
+        <label style={s.label}>📋 আগের পণ্য থেকে বেছে নিন (থাকলে)</label>
+        <div style={{maxHeight:160,overflowY:"auto",background:C.bg,borderRadius:6,border:`1px solid ${C.border}`,marginBottom:12}}>
+          {products.filter(p=>!form.name||p.name.toLowerCase().includes(form.name.toLowerCase())).length===0
+            ? <div style={{padding:"10px 12px",color:C.muted,fontSize:13}}>কোনো মিল নেই — নতুন পণ্য হবে</div>
+            : products.filter(p=>!form.name||p.name.toLowerCase().includes(form.name.toLowerCase())).map(p=>(
+              <div key={p.id}
+                onClick={()=>selectSuggestion(p)}
+                style={{padding:"10px 12px",cursor:"pointer",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}
+                onMouseEnter={e=>e.currentTarget.style.background=C.accentDim}
+                onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                <div>
+                  <div style={{fontWeight:600,fontSize:13,color:C.text}}>{p.name}</div>
+                  <div style={{fontSize:11,color:C.muted}}>{p.category} • কেনা দাম: {fmt(p.buyPrice)}</div>
+                </div>
+                <span style={{...s.badge(p.stock<=5?C.danger:p.stock<=10?C.warning:C.success),marginLeft:8}}>{p.stock} {p.unit}</span>
+              </div>
+            ))
+          }
+        </div>
+      </>}
+      <div style={{marginBottom:4}}>
+        <label style={s.label}>পণ্যের নাম</label>
+        <input
+          readOnly={!!edit}
+          value={form.name}
+          placeholder="পণ্যের নাম লিখুন..."
+          style={{...(edit?{color:C.muted,background:C.bg}:{})}}
+          onChange={e=>f("name",e.target.value)}
+        />
+      </div>
+
+      <div style={s.grid2}>
+        <div>
+          <label style={s.label}>ক্যাটাগরি</label>
+          <input value={form.category} onChange={e=>f("category",e.target.value)} placeholder="যেমন: Display, Battery"/>
+        </div>
+        <div>
+          <label style={s.label}>কেনা দাম (৳)</label>
+          <input type="number" value={form.buyPrice} onChange={e=>f("buyPrice",e.target.value)}/>
+        </div>
+      </div>
+
+      <div style={s.grid2}>
+        <div>
+          <label style={s.label}>একক</label>
+          <select value={form.unit} onChange={e=>f("unit",e.target.value)}>
+            {["পিস","সেট","জোড়া","ডজন"].map(u=><option key={u}>{u}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={s.label}>{edit?"নতুন আসা পরিমাণ যোগ করুন":"পরিমাণ"}</label>
+          <input type="number" min="1" placeholder="কতটা আনলেন?" value={form.addStock} onChange={e=>f("addStock",e.target.value)}/>
+        </div>
+      </div>
+
+      {edit && <div style={{background:C.accentDim,border:`1px solid ${C.accent}`,borderRadius:8,padding:12,marginTop:8}}>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:13}}>
+          <span style={{color:C.muted}}>আগের স্টক:</span>
+          <span style={{fontWeight:600}}>{edit.stock} {form.unit}</span>
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginTop:4}}>
+          <span style={{color:C.muted}}>নতুন যোগ:</span>
+          <span style={{color:C.accent,fontWeight:600}}>+{form.addStock||0} {form.unit}</span>
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:14,marginTop:6,paddingTop:6,borderTop:`1px solid ${C.accent}`}}>
+          <span style={{color:C.success,fontWeight:600}}>মোট হবে:</span>
+          <span style={{color:C.success,fontWeight:700}}>{edit.stock+(+form.addStock||0)} {form.unit}</span>
+        </div>
+      </div>}
+
+      <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:20}}>
+        <button style={s.btn()} onClick={()=>setShow(false)}>বাতিল</button>
+        <button style={s.btn("primary")} onClick={saveItem}>✅ সংরক্ষণ করুন</button>
+      </div>
+    </Modal>
+  </div>;
+}
+
+// ── SALES ─────────────────────────────────────────────────
+function SalesPage({products,setProducts,sales,setSales}){
+  const [show,setShow]=useState(false);
+  const [type,setType]=useState("retail");
+  const [items,setItems]=useState([{productId:"",qty:1,sellPrice:""}]);
+  const [date,setDate]=useState(today());
+
+  const getBuy=id=>{ const p=products.find(x=>x.id===+id); return p?p.buyPrice:0; };
+  const total=items.reduce((a,i)=>a+(+i.sellPrice||0)*(+i.qty||0),0);
+  const profit=items.reduce((a,i)=>a+((+i.sellPrice||0)-getBuy(i.productId))*(+i.qty||0),0);
+
+  const addItem=()=>setItems([...items,{productId:"",qty:1,sellPrice:""}]);
+  const upItem=(i,k,v)=>{ const arr=[...items]; arr[i]={...arr[i],[k]:v}; setItems(arr); };
+
+  const saveSale=()=>{
+    if(!items[0].productId || !items[0].sellPrice) return;
+    const upd=[...products];
+    items.forEach(item=>{ const idx=upd.findIndex(p=>p.id===+item.productId); if(idx!==-1) upd[idx]={...upd[idx],stock:upd[idx].stock-+item.qty}; });
+    setProducts(upd); save("products",upd);
+    const newSales=[...sales,{id:Date.now(),date,type,items:items.map(i=>({productId:+i.productId,qty:+i.qty,price:+i.sellPrice})),total,profit}];
+    setSales(newSales); save("sales",newSales);
+    setShow(false); setItems([{productId:"",qty:1,sellPrice:""}]);
+  };
+
+  const [search,setSearch]=useState("");
+  const filteredSales=sales.filter(sl=>{
+    if(!search) return true;
+    const q=search.toLowerCase();
+    return sl.items?.some(item=>{
+      const p=products.find(x=>x.id===item.productId);
+      return p?.name.toLowerCase().includes(q);
+    })||sl.date?.includes(q);
+  });
+
+  return <div>
+    <div style={s.pageTitle}>🛒 বিক্রয় ম্যানেজমেন্ট</div>
+    <div style={s.pageSub}>পাইকারি ও খুচরা বিক্রয়ের হিসাব</div>
+    <div style={{display:"flex",gap:12,marginBottom:16,flexWrap:"wrap"}}>
+      <button style={s.btn("primary")} onClick={()=>setShow(true)}>+ নতুন বিক্রয়</button>
+      <input style={{maxWidth:320}} placeholder="🔍 পণ্যের নাম বা তারিখ দিয়ে খুঁজুন..." value={search} onChange={e=>setSearch(e.target.value)}/>
+      {search && <button style={{...s.btn("danger"),padding:"8px 12px"}} onClick={()=>setSearch("")}>✕</button>}
+    </div>
+    {search && <div style={{...s.card,borderColor:C.accent,padding:"10px 16px",marginBottom:12}}>
+      <span style={{color:C.accent,fontWeight:600}}>{filteredSales.length}টি ফলাফল</span>
+      <span style={{color:C.muted,fontSize:13}}> — "{search}" এর জন্য</span>
+    </div>}
+    <div style={s.card}>
+      <div style={{overflowX:"auto"}}>
+      <table>
+        <thead><tr>{["তারিখ","পণ্যসমূহ","ধরন","মোট","লাভ",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
+        <tbody>
+          {[...filteredSales].reverse().map(sl=>(
+            <tr key={sl.id}>
+              <td>{sl.date}</td>
+              <td>{sl.items?.map((item,i)=>{ const p=products.find(x=>x.id===item.productId); return <div key={i} style={{fontSize:12}}><b>{p?p.name:"অজানা"}</b> × {item.qty} = {fmt(item.price*item.qty)}</div>; })}</td>
+              <td><span style={s.badge(sl.type==="retail"?C.accent:C.warning)}>{sl.type==="retail"?"খুচরা":"পাইকারি"}</span></td>
+              <td>{fmt(sl.total)}</td>
+              <td><span style={{color:C.success,fontWeight:600}}>+{fmt(sl.profit)}</span></td>
+              <td><button style={{...s.btn("danger"),padding:"4px 8px"}} onClick={()=>{ if(!window.confirm("এই বিক্রয় মুছে ফেলবেন?")) return; const u=sales.filter(x=>x.id!==sl.id); setSales(u); save("sales",u); }}>🗑️</button></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      </div>
+    </div>
+    <Modal open={show} onClose={()=>setShow(false)} title="নতুন বিক্রয়">
+      <label style={s.label}>তারিখ</label>
+      <input type="date" value={date} onChange={e=>setDate(e.target.value)}/>
+      <label style={s.label}>বিক্রয়ের ধরন</label>
+      <div style={{display:"flex",gap:10,marginBottom:4}}>
+        {["retail","wholesale"].map(t=><button key={t} style={{...s.btn(type===t?"primary":undefined),flex:1}} onClick={()=>setType(t)}>{t==="retail"?"খুচরা":"পাইকারি"}</button>)}
+      </div>
+      <div style={{...s.secTitle,marginTop:16}}>পণ্য তালিকা</div>
+      {items.map((item,i)=>(
+        <div key={i} style={{display:"flex",gap:8,marginBottom:8,alignItems:"flex-end",flexWrap:"wrap"}}>
+          <div style={{flex:"2 1 140px"}}>
+            <label style={s.label}>পণ্য</label>
+            <select value={item.productId} onChange={e=>upItem(i,"productId",e.target.value)}>
+              <option value="">বেছে নিন</option>
+              {products.map(p=><option key={p.id} value={p.id}>{p.name} (স্টক:{p.stock})</option>)}
+            </select>
+          </div>
+          <div style={{flex:"1 1 60px"}}>
+            <label style={s.label}>পরিমাণ</label>
+            <input type="number" min="1" value={item.qty} onChange={e=>upItem(i,"qty",e.target.value)}/>
+          </div>
+          <div style={{flex:"1 1 80px"}}>
+            <label style={s.label}>বিক্রয় দাম (৳)</label>
+            <input type="number" placeholder="লিখুন" value={item.sellPrice} onChange={e=>upItem(i,"sellPrice",e.target.value)}/>
+          </div>
+          <div style={{flex:"1 1 60px"}}>
+            <label style={s.label}>লাভ</label>
+            <input readOnly value={item.sellPrice&&item.productId?(+item.sellPrice-getBuy(item.productId))*+item.qty:""}
+              style={{color:C.success}}/>
+          </div>
+          {items.length>1 && <button style={{...s.btn("danger"),padding:"8px 10px"}} onClick={()=>setItems(items.filter((_,idx)=>idx!==i))}>✕</button>}
+        </div>
+      ))}
+      <button style={{...s.btn(),marginBottom:14}} onClick={addItem}>+ আরো পণ্য</button>
+      <div style={{background:C.surface,borderRadius:8,padding:14,marginBottom:16}}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:C.muted}}>মোট</span><b>{fmt(total)}</b></div>
+        <div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:C.muted}}>লাভ</span><span style={{color:C.success,fontWeight:700}}>+{fmt(profit)}</span></div>
+      </div>
+      <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <button style={s.btn()} onClick={()=>setShow(false)}>বাতিল</button>
+        <button style={s.btn("primary")} onClick={saveSale}>বিক্রয় নিশ্চিত করুন</button>
+      </div>
+    </Modal>
+  </div>;
+}
+
+// ── SERVICE ───────────────────────────────────────────────
+function ServicePage({services,setServices,products,setProducts}){
+  const [show,setShow]=useState(false);
+  const [edit,setEdit]=useState(null);
+  const blank={date:today(),customerName:"",phone:"",device:"",issue:"",status:"pending",charge:"",cost:""};
+  const [form,setForm]=useState(blank);
+  const f=(k,v)=>setForm({...form,[k]:v});
+
+  const openEdit=sv=>{ setEdit(sv); setForm({...sv}); setShow(true); };
+  const saveItem=()=>{
+    if(!form.customerName) return;
+    const item={...form,charge:+form.charge,cost:+form.cost};
+    const updated=edit?services.map(sv=>sv.id===edit.id?{...sv,...item}:sv):[...services,{...item,id:Date.now()}];
+    setServices(updated); save("services",updated);
+
+    // স্টক থেকে ব্যবহৃত পার্টস বাদ দাও
+    if((form.usedParts||[]).length>0){
+      const updatedProducts=[...products];
+      (form.usedParts||[]).forEach(part=>{
+        if(!part.productId) return;
+        const idx=updatedProducts.findIndex(p=>p.id===+part.productId);
+        if(idx!==-1){
+          updatedProducts[idx]={...updatedProducts[idx],stock:Math.max(0,updatedProducts[idx].stock-(+part.qty||1))};
+        }
+      });
+      setProducts(updatedProducts); save("products",updatedProducts);
+    }
+    setShow(false);
+  };
+  const del=id=>{ if(!window.confirm("মুছে ফেলবেন?")) return; const u=services.filter(sv=>sv.id!==id); setServices(u); save("services",u); };
+
+  const stColor={pending:C.warning,"in-progress":C.accent,completed:C.success};
+  const stLabel={pending:"অপেক্ষায়","in-progress":"চলছে",completed:"সম্পন্ন"};
+
+  const [search,setSearch]=useState("");
+  const filtered=services.filter(sv=>
+    sv.customerName?.toLowerCase().includes(search.toLowerCase())||
+    sv.phone?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return <div>
+    <div style={s.pageTitle}>🔧 সার্ভিস ম্যানেজমেন্ট</div>
+    <div style={s.pageSub}>মোবাইল মেরামত ও সার্ভিসের হিসাব</div>
+    <div style={{display:"flex",gap:12,marginBottom:16,flexWrap:"wrap"}}>
+      <button style={s.btn("primary")} onClick={()=>{ setEdit(null); setForm(blank); setShow(true); }}>+ নতুন সার্ভিস জব</button>
+      <input style={{maxWidth:300}} placeholder="🔍 গ্রাহকের নাম বা ফোন নম্বর দিয়ে খুঁজুন..." value={search} onChange={e=>setSearch(e.target.value)}/>
+      {search && <button style={{...s.btn("danger"),padding:"8px 12px"}} onClick={()=>setSearch("")}>✕ ক্লিয়ার</button>}
+    </div>
+    {search && <div style={{...s.card,borderColor:C.accent,padding:"10px 16px",marginBottom:12}}>
+      <span style={{color:C.accent,fontWeight:600}}>{filtered.length}টি ফলাফল</span>
+      <span style={{color:C.muted,fontSize:13}}> — "{search}" এর জন্য</span>
+    </div>}
+    <div style={s.card}>
+      <div style={{overflowX:"auto"}}>
+      <table>
+        <thead><tr>{["তারিখ","গ্রাহক","ফোন","ডিভাইস","সমস্যা","চার্জ","লাভ","স্ট্যাটাস",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
+        <tbody>
+          {[...filtered].reverse().map(sv=>(
+            <tr key={sv.id}>
+              <td>{sv.date}</td>
+              <td><b>{sv.customerName}</b></td>
+              <td>{sv.phone}</td>
+              <td>{sv.device}</td>
+              <td>{sv.issue}</td>
+              <td>{fmt(sv.charge)}</td>
+              <td><span style={{color:C.success}}>+{fmt(sv.charge-sv.cost)}</span></td>
+              <td><span style={s.badge(stColor[sv.status])}>{stLabel[sv.status]}</span></td>
+              <td>
+                <button style={{...s.btn(),padding:"4px 8px",marginRight:4}} onClick={()=>openEdit(sv)}>✏️</button>
+                <button style={{...s.btn("danger"),padding:"4px 8px"}} onClick={()=>del(sv.id)}>🗑️</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      </div>
+    </div>
+    <Modal open={show} onClose={()=>setShow(false)} title={edit?"সার্ভিস সম্পাদনা":"নতুন সার্ভিস জব"}>
+      <div style={s.grid2}>
+        {[["তারিখ","date","date"],["গ্রাহকের নাম","customerName","text"],["ফোন নম্বর","phone","text"],["ডিভাইস","device","text"]].map(([label,key,type])=>(
+          <div key={key}><label style={s.label}>{label}</label><input type={type} value={form[key]||""} onChange={e=>f(key,e.target.value)}/></div>
+        ))}
+      </div>
+      <label style={s.label}>সমস্যার বিবরণ</label>
+      <input value={form.issue||""} onChange={e=>f("issue",e.target.value)}/>
+      <div style={s.grid2}>
+        <div><label style={s.label}>সার্ভিস চার্জ (৳)</label><input type="number" value={form.charge||""} onChange={e=>f("charge",e.target.value)}/></div>
+        <div><label style={s.label}>পার্টস খরচ (৳)</label><input type="number" value={form.cost||""} onChange={e=>f("cost",e.target.value)}/></div>
+      </div>
+
+      {/* স্টক থেকে পার্টস ব্যবহার */}
+      <div style={{background:C.accentDim,border:`1px solid ${C.accent}`,borderRadius:8,padding:14,marginTop:8,marginBottom:8}}>
+        <div style={{color:C.accent,fontWeight:600,fontSize:13,marginBottom:10}}>📦 স্টক থেকে পার্টস ব্যবহার (ঐচ্ছিক)</div>
+        {(form.usedParts||[]).map((part,i)=>(
+          <div key={i} style={{display:"flex",gap:8,marginBottom:8,alignItems:"flex-end",flexWrap:"wrap"}}>
+            <div style={{flex:2}}>
+              <label style={s.label}>পণ্য</label>
+              <select value={part.productId||""} onChange={e=>{
+                const arr=[...(form.usedParts||[])]; arr[i]={...arr[i],productId:e.target.value}; f("usedParts",arr);
+              }}>
+                <option value="">বেছে নিন</option>
+                {products.map(p=><option key={p.id} value={p.id}>{p.name} (স্টক:{p.stock})</option>)}
+              </select>
+            </div>
+            <div style={{flex:1}}>
+              <label style={s.label}>পরিমাণ</label>
+              <input type="number" min="1" value={part.qty||1} onChange={e=>{
+                const arr=[...(form.usedParts||[])]; arr[i]={...arr[i],qty:+e.target.value}; f("usedParts",arr);
+              }}/>
+            </div>
+            <button style={{...s.btn("danger"),padding:"8px 10px"}} onClick={()=>{
+              const arr=(form.usedParts||[]).filter((_,idx)=>idx!==i); f("usedParts",arr);
+            }}>✕</button>
+          </div>
+        ))}
+        <button style={{...s.btn(),fontSize:12,padding:"6px 12px"}} onClick={()=>f("usedParts",[...(form.usedParts||[]),{productId:"",qty:1}])}>
+          + পার্টস যোগ করুন
+        </button>
+        {(form.usedParts||[]).length>0 && <div style={{marginTop:10,fontSize:12,color:C.muted}}>
+          ⚠️ সংরক্ষণ করলে এই পার্টসগুলো স্টক থেকে বাদ যাবে
+        </div>}
+      </div>
+
+      <label style={s.label}>স্ট্যাটাস</label>
+      <select value={form.status} onChange={e=>f("status",e.target.value)}>
+        <option value="pending">অপেক্ষায়</option>
+        <option value="in-progress">চলছে</option>
+        <option value="completed">সম্পন্ন</option>
+      </select>
+      <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:20}}>
+        <button style={s.btn()} onClick={()=>setShow(false)}>বাতিল</button>
+        <button style={s.btn("primary")} onClick={saveItem}>সংরক্ষণ করুন</button>
+      </div>
+    </Modal>
+  </div>;
+}
+
+// ── EXPENSE ───────────────────────────────────────────────
+function ExpensePage({expenses,setExpenses}){
+  const [show,setShow]=useState(false);
+  const [form,setForm]=useState({date:today(),category:"ভাড়া",amount:"",note:""});
+  const f=(k,v)=>setForm({...form,[k]:v});
+  const total=expenses.reduce((a,e)=>a+e.amount,0);
+
+  const saveItem=()=>{
+    if(!form.amount) return;
+    const updated=[...expenses,{...form,id:Date.now(),amount:+form.amount}];
+    setExpenses(updated); save("expenses",updated);
+    setForm({date:today(),category:"ভাড়া",amount:"",note:""}); setShow(false);
+  };
+  const del=id=>{ if(!window.confirm("মুছে ফেলবেন?")) return; const u=expenses.filter(e=>e.id!==id); setExpenses(u); save("expenses",u); };
+
+  return <div>
+    <div style={s.pageTitle}>💸 খরচের হিসাব</div>
+    <div style={s.pageSub}>দোকানের সকল খরচের রেকর্ড</div>
+    <div style={{...s.card,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <div>
+        <div style={{fontSize:11,color:C.muted,textTransform:"uppercase",letterSpacing:0.8}}>মোট খরচ</div>
+        <div style={{fontSize:26,fontWeight:700,color:C.danger}}>{fmt(total)}</div>
+      </div>
+      <button style={s.btn("primary")} onClick={()=>setShow(true)}>+ নতুন খরচ</button>
+    </div>
+    <div style={s.card}>
+      <div style={{overflowX:"auto"}}>
+      <table>
+        <thead><tr>{["তারিখ","ক্যাটাগরি","পরিমাণ","বিবরণ",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
+        <tbody>
+          {[...expenses].reverse().map(e=>(
+            <tr key={e.id}>
+              <td>{e.date}</td>
+              <td><span style={s.badge(C.warning)}>{e.category}</span></td>
+              <td><span style={{color:C.danger,fontWeight:600}}>{fmt(e.amount)}</span></td>
+              <td>{e.note}</td>
+              <td><button style={{...s.btn("danger"),padding:"4px 8px"}} onClick={()=>del(e.id)}>🗑️</button></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      </div>
+    </div>
+    <Modal open={show} onClose={()=>setShow(false)} title="নতুন খরচ">
+      <label style={s.label}>তারিখ</label><input type="date" value={form.date} onChange={e=>f("date",e.target.value)}/>
+      <label style={s.label}>ক্যাটাগরি</label>
+      <select value={form.category} onChange={e=>f("category",e.target.value)}>
+        {["ভাড়া","বেতন","বিদ্যুৎ","পানি","ইন্টারনেট","অন্যান্য"].map(c=><option key={c}>{c}</option>)}
+      </select>
+      <label style={s.label}>পরিমাণ (৳)</label><input type="number" value={form.amount} onChange={e=>f("amount",e.target.value)}/>
+      <label style={s.label}>বিবরণ</label><input value={form.note} onChange={e=>f("note",e.target.value)}/>
+      <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:20}}>
+        <button style={s.btn()} onClick={()=>setShow(false)}>বাতিল</button>
+        <button style={s.btn("primary")} onClick={saveItem}>সংরক্ষণ করুন</button>
+      </div>
+    </Modal>
+  </div>;
+}
+
+// ── REPORT ────────────────────────────────────────────────
+function ReportPage({sales,services,expenses,products}){
+  const totalSalesIncome=sales.reduce((a,s)=>a+s.total,0);
+  const totalSalesProfit=sales.reduce((a,s)=>a+s.profit,0);
+  const completedSvc=services.filter(s=>s.status==="completed");
+  const svcIncome=completedSvc.reduce((a,s)=>a+s.charge,0);
+  const svcProfit=completedSvc.reduce((a,s)=>a+(s.charge-s.cost),0);
+  const totalExp=expenses.reduce((a,e)=>a+e.amount,0);
+  const grossProfit=totalSalesProfit+svcProfit;
+  const netProfit=grossProfit-totalExp;
+
+  const productSales={};
+  sales.forEach(sl=>sl.items?.forEach(item=>{ productSales[item.productId]=(productSales[item.productId]||0)+item.qty; }));
+  const topProducts=Object.entries(productSales).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([id,qty])=>({name:products.find(p=>p.id===+id)?.name||"অজানা",qty}));
+
+  return <div>
+    <div style={s.pageTitle}>📈 লাভ-লোকসান রিপোর্ট</div>
+    <div style={s.pageSub}>সামগ্রিক আর্থিক বিশ্লেষণ</div>
+    <div style={s.card}>
+      <div style={s.secTitle}>💹 আয় ও লাভের সারসংক্ষেপ</div>
+      <table>
+        <tbody>
+          {[
+            ["পার্টস বিক্রয় (মোট আয়)",fmt(totalSalesIncome),C.text],
+            ["পার্টস বিক্রয় (লাভ)",fmt(totalSalesProfit),C.success],
+            ["সার্ভিস আয়",fmt(svcIncome),C.text],
+            ["সার্ভিস লাভ",fmt(svcProfit),C.success],
+            ["মোট আয়",fmt(totalSalesIncome+svcIncome),C.accent],
+            ["মোট খরচ",fmt(totalExp),C.danger],
+            ["গ্রস লাভ",fmt(grossProfit),C.success],
+            ["নিট লাভ/লোকসান",fmt(netProfit),netProfit>=0?C.success:C.danger],
+          ].map(([label,val,color])=>(
+            <tr key={label}>
+              <td style={{color:C.muted}}>{label}</td>
+              <td style={{color,fontWeight:700,textAlign:"right"}}>{val}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    {topProducts.length>0 && <div style={s.card}>
+      <div style={s.secTitle}>🏆 সর্বাধিক বিক্রিত পণ্য</div>
+      {topProducts.map((p,i)=>(
+        <div key={p.name} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
+          <span style={{color:C.muted,width:24}}>#{i+1}</span>
+          <span style={{flex:1,fontWeight:500}}>{p.name}</span>
+          <span style={s.badge(C.accent)}>{p.qty} পিস</span>
+        </div>
+      ))}
+    </div>}
+  </div>;
+}
+
+// ── FIX PAGE ─────────────────────────────────────────────
+function FixPage({products,setProducts}){
+  const dupes=[];
+  const seen={};
+  products.forEach(p=>{
+    const key=p.name.trim().toLowerCase();
+    if(seen[key]) dupes.push(p.name);
+    seen[key]=true;
+  });
+  const uniqueDupes=[...new Set(dupes)];
+
+  const doMerge=()=>{
+    // সরাসরি localStorage থেকে পড়ো
+    let raw=[];
+    try{ raw=JSON.parse(localStorage.getItem("products")||"[]"); }catch(e){ raw=products; }
+    
+    const merged=[];
+    raw.forEach(p=>{
+      const key=p.name.trim().toLowerCase();
+      const idx=merged.findIndex(x=>x.name.trim().toLowerCase()===key);
+      if(idx!==-1){
+        merged[idx].stock=Number(merged[idx].stock)+Number(p.stock);
+      } else {
+        merged.push({...p, stock:Number(p.stock)});
+      }
+    });
+    
+    localStorage.setItem("products",JSON.stringify(merged));
+    setProducts(merged);
+    setTimeout(()=>window.location.reload(),300);
+  };
+
+  return <div>
+    <div style={s.pageTitle}>🛠️ ডেটা ঠিক করুন</div>
+    <div style={s.pageSub}>একই নামের পণ্য একটাতে মার্জ করুন</div>
+
+    {uniqueDupes.length===0
+      ? <div style={{...s.card,borderColor:C.success,textAlign:"center",padding:40}}>
+          <div style={{fontSize:40,marginBottom:12}}>✅</div>
+          <div style={{fontSize:16,fontWeight:600,color:C.success}}>কোনো ডুপ্লিকেট নেই!</div>
+          <div style={{color:C.muted,marginTop:8}}>সব পণ্য ঠিকঠাক আছে।</div>
+        </div>
+      : <div>
+          <div style={{...s.card,borderColor:C.danger}}>
+            <div style={{...s.secTitle,color:C.danger}}>⚠️ নিচের পণ্যগুলো একাধিকবার আছে:</div>
+            {uniqueDupes.map(name=>{
+              const all=products.filter(p=>p.name.trim().toLowerCase()===name.trim().toLowerCase());
+              const totalStock=all.reduce((a,p)=>a+Number(p.stock),0);
+              return <div key={name} style={{background:C.danger+"11",border:`1px solid ${C.danger}33`,borderRadius:8,padding:12,marginBottom:10}}>
+                <div style={{fontWeight:700,fontSize:14,marginBottom:6}}>{name}</div>
+                <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+                  {all.map((p,i)=>(
+                    <div key={i} style={{background:C.surface,borderRadius:6,padding:"6px 12px",fontSize:13}}>
+                      লাইন {i+1}: <b>{p.stock} পিস</b>
+                    </div>
+                  ))}
+                  <div style={{background:C.success+"22",borderRadius:6,padding:"6px 12px",fontSize:13,color:C.success}}>
+                    মার্জের পর: <b>{totalStock} পিস</b>
+                  </div>
+                </div>
+              </div>;
+            })}
+          </div>
+
+          <div style={{...s.card,textAlign:"center",padding:30}}>
+            <div style={{color:C.muted,marginBottom:16,fontSize:14}}>
+              উপরের <b style={{color:C.warning}}>{uniqueDupes.length}টি পণ্য</b> একটাতে মার্জ হবে এবং স্টক যোগ হয়ে যাবে
+            </div>
+            <button style={{...s.btn("primary"),fontSize:15,padding:"12px 32px"}} onClick={doMerge}>
+              ✅ এখনই মার্জ করুন
+            </button>
+          </div>
+        </div>
+    }
+  </div>;
+}
+
+// ── MAIN APP ──────────────────────────────────────────────
+const NAV=[
+  {id:"dashboard",label:"ড্যাশবোর্ড",icon:"📊"},
+  {id:"stock",label:"স্টক",icon:"📦"},
+  {id:"sales",label:"বিক্রয়",icon:"🛒"},
+  {id:"service",label:"সার্ভিস",icon:"🔧"},
+  {id:"expense",label:"খরচ",icon:"💸"},
+  {id:"report",label:"রিপোর্ট",icon:"📈"},
+  {id:"fix",label:"ডেটা ঠিক করুন",icon:"🛠️"},
+  {id:"branches",label:"শাখা ম্যানেজ",icon:"🏢",adminOnly:true},
+];
+
+function App(){
+  const [page,setPage]=useState("dashboard");
+  const [user,setUser]=useState(null);
+  const [authLoading,setAuthLoading]=useState(true);
+  const [branchId,setBranchId]=useState("branch1");
+  const [viewBranch,setViewBranch]=useState("branch1"); // admin এর জন্য কোন branch দেখছে
+  const [products,setProducts]=useState([]);
+  const [sales,setSales]=useState([]);
+  const [services,setServices]=useState([]);
+  const [expenses,setExpenses]=useState([]);
+  const [menuOpen,setMenuOpen]=useState(false);
+  const [dataLoading,setDataLoading]=useState(false);
+
+  const loadBranchData = async(bid) => {
+    setDataLoading(true);
+    try{
+      const keys=["products","sales","services","expenses"];
+      const defaults=[INIT_PRODUCTS,INIT_SALES,INIT_SERVICES,INIT_EXPENSES];
+      const setters=[setProducts,setSales,setServices,setExpenses];
+      for(let i=0;i<keys.length;i++){
+        const docId=bid+"_"+keys[i];
+        const cached=localStorage.getItem(bid+"_"+keys[i]);
+        if(cached) setters[i](JSON.parse(cached));
+        else setters[i](defaults[i]);
+        // Firebase থেকে লোড
+        db.collection("shopdata").doc(docId).get().then(doc=>{
+          if(doc.exists){
+            const val=JSON.parse(doc.data().value);
+            setters[i](val);
+            localStorage.setItem(bid+"_"+keys[i],JSON.stringify(val));
+          }
+        }).catch(e=>console.log(e));
+      }
+    }catch(e){ console.log(e); }
+    setDataLoading(false);
+  };
+
+  useEffect(()=>{
+    const unsub=auth.onAuthStateChanged(u=>{
+      setUser(u);
+      setAuthLoading(false);
+      if(u){
+        const bid=getBranchId(u.email);
+        setBranchId(bid);
+        const initialBranch = bid==="admin"?"branch1":bid;
+        setViewBranch(initialBranch);
+        loadBranchData(initialBranch);
+      }
+    });
+    return unsub;
+  },[]);
+
+  useEffect(()=>{ if(user) loadBranchData(viewBranch); },[viewBranch]);
+
+  const saveData=(key,val)=>{ save(key,val,viewBranch); };
+
+  const setProductsAndSave=val=>{ setProducts(val); saveData("products",val); };
+  const setSalesAndSave=val=>{ setSales(val); saveData("sales",val); };
+  const setServicesAndSave=val=>{ setServices(val); saveData("services",val); };
+  const setExpensesAndSave=val=>{ setExpenses(val); saveData("expenses",val); };
+
+  if(authLoading) return <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",color:C.accent,fontSize:18}}>লোড হচ্ছে...</div>;
+  if(!user) return <LoginPage/>;
+
+  const renderPage=()=>{
+    if(dataLoading) return <div style={{textAlign:"center",padding:60,color:C.muted}}>ডেটা লোড হচ্ছে...</div>;
+    switch(page){
+      case "dashboard": return <Dashboard products={products} sales={sales} services={services} expenses={expenses}/>;
+      case "stock": return <StockPage products={products} setProducts={setProductsAndSave}/>;
+      case "sales": return <SalesPage products={products} setProducts={setProductsAndSave} sales={sales} setSales={setSalesAndSave}/>;
+      case "service": return <ServicePage services={services} setServices={setServicesAndSave} products={products} setProducts={setProductsAndSave}/>;
+      case "expense": return <ExpensePage expenses={expenses} setExpenses={setExpensesAndSave}/>;
+      case "report": return <ReportPage sales={sales} services={services} expenses={expenses} products={products}/>;
+      case "fix": return <FixPage products={products} setProducts={setProductsAndSave}/>;
+      case "branches": return <BranchManager/>;
+    }
+  };
+
+  return <div style={{minHeight:"100vh",background:C.bg,color:C.text}}>
+    {/* Mobile top bar */}
+    <div style={{display:"none",background:C.surface,padding:"12px 16px",position:"fixed",top:0,left:0,right:0,zIndex:200,borderBottom:`1px solid ${C.border}`,justifyContent:"space-between",alignItems:"center",
+      // show on mobile via CSS
+    }} id="topbar">
+      <span style={{color:C.accent,fontWeight:700}}>📱 Singapore Telecom</span>
+      <button style={{background:"none",border:"none",color:C.text,fontSize:22,cursor:"pointer"}} onClick={()=>setMenuOpen(!menuOpen)}>☰</button>
+    </div>
+
+    {/* Sidebar */}
+    <div id="sidebar" style={{...{width:220,background:C.surface,borderRight:`1px solid ${C.border}`,padding:"24px 0",position:"fixed",top:0,left:0,height:"100vh",display:"flex",flexDirection:"column",zIndex:100,overflowY:"auto"}}}>
+      <div className="logo" style={{padding:"0 20px 20px",borderBottom:`1px solid ${C.border}`,marginBottom:16}}>
+        <div style={{color:C.accent,fontWeight:700,fontSize:16}}>📱 Singapore Telecom</div>
+        <div style={{color:C.muted,fontSize:11,marginTop:2}}>ম্যানেজমেন্ট সিস্টেম</div>
+      </div>
+      {NAV.map(n=>(
+        <div key={n.id} className="nav-item" style={{display:"flex",alignItems:"center",gap:10,padding:"10px 20px",cursor:"pointer",background:page===n.id?C.accentDim:"transparent",borderLeft:page===n.id?`3px solid ${C.accent}`:"3px solid transparent",color:page===n.id?C.accent:C.muted,fontWeight:page===n.id?600:400,fontSize:13}} onClick={()=>{ setPage(n.id); setMenuOpen(false); }}>
+          <span>{n.icon}</span><span>{n.label}</span>
+        </div>
+      ))}
+      <div style={{marginTop:"auto",padding:20,borderTop:`1px solid ${C.border}`}}>
+        {isAdmin(user.email) && <div style={{marginBottom:12}}>
+          <div style={{fontSize:11,color:C.accent,marginBottom:6,fontWeight:600}}>👑 Admin — শাখা বেছে নিন:</div>
+          {["branch1","branch2"].map(b=>(
+            <div key={b} onClick={()=>setViewBranch(b)}
+              style={{padding:"6px 10px",borderRadius:6,cursor:"pointer",marginBottom:4,background:viewBranch===b?C.accentDim:"transparent",border:viewBranch===b?`1px solid ${C.accent}`:`1px solid transparent`,color:viewBranch===b?C.accent:C.muted,fontSize:12}}>
+              {b==="branch1"?"🏪 শাখা ১":"🏪 শাখা ২"}
+            </div>
+          ))}
+        </div>}
+        <div style={{fontSize:11,color:C.muted,marginBottom:4}}>
+          {isAdmin(user.email)?"👑 Admin":"👤 "+viewBranch}
+        </div>
+        <div style={{fontSize:10,color:C.muted,marginBottom:8,wordBreak:"break-all"}}>{user.email}</div>
+        <div style={{fontSize:10,color:C.success,marginBottom:8}}>☁️ Cloud এ সেভ হচ্ছে</div>
+        <button onClick={()=>auth.signOut()}
+          style={{width:"100%",padding:"8px",borderRadius:6,border:"none",background:C.danger,color:"#fff",fontWeight:600,fontSize:12,cursor:"pointer"}}>
+          🚪 লগআউট
+        </button>
+      </div>
+    </div>
+
+    <div id="main" style={{marginLeft:220,padding:28,minHeight:"100vh"}}>
+      {renderPage()}
+    </div>
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+
+<style>
+@media (max-width: 700px) {
+  #sidebar { width: 100% !important; height: auto !important; position: relative !important; flex-direction: row !important; flex-wrap: wrap; padding: 10px !important; }
+  #main { margin-left: 0 !important; padding: 16px !important; }
+  .nav-item { padding: 8px 10px !important; font-size: 12px !important; }
+  .logo { display: none !important; }
+}
+</style>
+</body>
+</html>
