@@ -1152,7 +1152,7 @@ function App(){
       <div style={{marginTop:"auto",padding:20,borderTop:`1px solid ${C.border}`}}>
         {isAdmin(user.email) && getBranchId(user.email)==="admin" && <div style={{marginBottom:12}}>
           <div style={{fontSize:11,color:C.accent,marginBottom:6,fontWeight:600}}>👑 Admin — শাখা বেছে নিন:</div>
-          {allBranches.filter(b=>!ADMIN_EMAILS.includes(b.email)).map(b=>{
+          {allBranches.filter(b=>!ADMIN_EMAILS.includes(b.email) && b.email!=="robin@sgtelecom.com").map(b=>{
             const bid=b.email.split("@")[0];
             return <div key={bid} onClick={()=>setViewBranch(bid)}
               style={{padding:"6px 10px",borderRadius:6,cursor:"pointer",marginBottom:4,background:viewBranch===bid?C.accentDim:"transparent",border:viewBranch===bid?`1px solid ${b.color}`:`1px solid transparent`,color:viewBranch===bid?b.color:C.muted,fontSize:12}}>
