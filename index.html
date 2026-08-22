@@ -93,7 +93,7 @@ function LoginPage(){
     try{
       await auth.signInWithEmailAndPassword(selected.email, pass);
     }catch(e){
-      setError("পাসওয়ার্ড ভুল! আবার চেষ্টা করুন।");
+      setError("Error: " + e.code + " — " + e.message);
     }
     setLoading(false);
   };
