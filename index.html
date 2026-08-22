@@ -51,7 +51,7 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-const ADMIN_EMAILS = ["admin@sgtelecom.com","robin@sgtelecom.com"];
+const ADMIN_EMAILS = ["admin@sgtelecom.com"];
 const isAdmin = (email) => ADMIN_EMAILS.includes(email);
 const getBranchId = (email) => {
   if(ADMIN_EMAILS.includes(email)) return "admin";
@@ -1056,6 +1056,7 @@ function App(){
   const [authLoading,setAuthLoading]=useState(true);
   const [branchId,setBranchId]=useState("branch1");
   const [viewBranch,setViewBranch]=useState("branch1"); // admin এর জন্য কোন branch দেখছে
+  const [allBranches,setAllBranches]=useState(DEFAULT_BRANCHES);
   const [products,setProducts]=useState([]);
   const [sales,setSales]=useState([]);
   const [services,setServices]=useState([]);
@@ -1149,14 +1150,15 @@ function App(){
         </div>
       ))}
       <div style={{marginTop:"auto",padding:20,borderTop:`1px solid ${C.border}`}}>
-        {isAdmin(user.email) && <div style={{marginBottom:12}}>
+        {isAdmin(user.email) && getBranchId(user.email)==="admin" && <div style={{marginBottom:12}}>
           <div style={{fontSize:11,color:C.accent,marginBottom:6,fontWeight:600}}>👑 Admin — শাখা বেছে নিন:</div>
-          {["branch1","branch2"].map(b=>(
-            <div key={b} onClick={()=>setViewBranch(b)}
-              style={{padding:"6px 10px",borderRadius:6,cursor:"pointer",marginBottom:4,background:viewBranch===b?C.accentDim:"transparent",border:viewBranch===b?`1px solid ${C.accent}`:`1px solid transparent`,color:viewBranch===b?C.accent:C.muted,fontSize:12}}>
-              {b==="branch1"?"🏪 শাখা ১":"🏪 শাখা ২"}
-            </div>
-          ))}
+          {allBranches.filter(b=>!ADMIN_EMAILS.includes(b.email)).map(b=>{
+            const bid=b.email.split("@")[0];
+            return <div key={bid} onClick={()=>setViewBranch(bid)}
+              style={{padding:"6px 10px",borderRadius:6,cursor:"pointer",marginBottom:4,background:viewBranch===bid?C.accentDim:"transparent",border:viewBranch===bid?`1px solid ${b.color}`:`1px solid transparent`,color:viewBranch===bid?b.color:C.muted,fontSize:12}}>
+              {b.icon} {b.label}
+            </div>;
+          })}
         </div>}
         <div style={{fontSize:11,color:C.muted,marginBottom:4}}>
           {isAdmin(user.email)?"👑 Admin":"👤 "+viewBranch}
@@ -1187,5 +1189,14 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
   .logo { display: none !important; }
 }
 </style>
+  <script>
+    if('serviceWorker' in navigator){
+      window.addEventListener('load', ()=>{
+        navigator.serviceWorker.register('service-worker.js')
+          .then(reg=>console.log('SW registered'))
+          .catch(err=>console.log('SW error:', err));
+      });
+    }
+  </script>
 </body>
 </html>
