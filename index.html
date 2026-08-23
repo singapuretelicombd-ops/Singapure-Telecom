@@ -677,11 +677,30 @@ function SalesPage({products,setProducts,sales,setSales}){
       {items.map((item,i)=>(
         <div key={i} style={{display:"flex",gap:8,marginBottom:8,alignItems:"flex-end",flexWrap:"wrap"}}>
           <div style={{flex:"2 1 140px"}}>
-            <label style={s.label}>পণ্য</label>
-            <select value={item.productId} onChange={e=>upItem(i,"productId",e.target.value)}>
-              <option value="">বেছে নিন</option>
-              {products.map(p=><option key={p.id} value={p.id}>{p.name} (স্টক:{p.stock})</option>)}
-            </select>
+            <label style={s.label}>পণ্য খুঁজুন</label>
+            <div style={{position:"relative"}}>
+              <input
+                placeholder="🔍 পণ্যের নাম লিখুন..."
+                value={item._search||""}
+                onChange={e=>{
+                  upItem(i,"_search",e.target.value);
+                  upItem(i,"productId","");
+                }}
+                style={{width:"100%",boxSizing:"border-box"}}
+              />
+              {item._search && !item.productId && (()=>{
+                const filtered=products.filter(p=>p.name.toLowerCase().includes((item._search||"").toLowerCase()));
+                return filtered.length>0?<div style={{position:"absolute",top:"100%",left:0,right:0,background:C.card,border:`1px solid ${C.accent}`,borderRadius:6,zIndex:100,maxHeight:180,overflowY:"auto"}}>
+                  {filtered.map(p=><div key={p.id}
+                    onClick={()=>{ upItem(i,"productId",p.id); upItem(i,"_search",p.name); upItem(i,"sellPrice",""); }}
+                    style={{padding:"8px 12px",cursor:"pointer",fontSize:13,borderBottom:`1px solid ${C.border}`}}
+                    onMouseEnter={e=>e.currentTarget.style.background=C.accentDim}
+                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                    <b style={{color:C.accent}}>{p.name}</b> <span style={{color:C.muted,fontSize:11}}>স্টক: {p.stock}</span>
+                  </div>)}
+                </div>:null;
+              })()}
+            </div>
           </div>
           <div style={{flex:"1 1 60px"}}>
             <label style={s.label}>পরিমাণ</label>
@@ -1144,7 +1163,7 @@ function App(){
         <div style={{color:C.accent,fontWeight:700,fontSize:16}}>📱 Singapore Telecom</div>
         <div style={{color:C.muted,fontSize:11,marginTop:2}}>ম্যানেজমেন্ট সিস্টেম</div>
       </div>
-      {NAV.map(n=>(
+      {NAV.filter(n=>!n.adminOnly||isAdmin(user.email)).map(n=>(
         <div key={n.id} className="nav-item" style={{display:"flex",alignItems:"center",gap:10,padding:"10px 20px",cursor:"pointer",background:page===n.id?C.accentDim:"transparent",borderLeft:page===n.id?`3px solid ${C.accent}`:"3px solid transparent",color:page===n.id?C.accent:C.muted,fontWeight:page===n.id?600:400,fontSize:13}} onClick={()=>{ setPage(n.id); setMenuOpen(false); }}>
           <span>{n.icon}</span><span>{n.label}</span>
         </div>
