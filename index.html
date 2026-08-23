@@ -674,30 +674,14 @@ function SalesPage({products,setProducts,sales,setSales}){
         {["retail","wholesale"].map(t=><button key={t} style={{...s.btn(type===t?"primary":undefined),flex:1}} onClick={()=>setType(t)}>{t==="retail"?"খুচরা":"পাইকারি"}</button>)}
       </div>
       <div style={{...s.secTitle,marginTop:16}}>পণ্য তালিকা</div>
-      {items.map((item,i)=>{
-        const filtered = item._search
-          ? products.filter(p=>p.name.toLowerCase().includes(item._search.toLowerCase()))
-          : [];
-        return <div key={i} style={{display:"flex",gap:8,marginBottom:8,alignItems:"flex-end",flexWrap:"wrap"}}>
+      {items.map((item,i)=>(
+        <div key={i} style={{display:"flex",gap:8,marginBottom:8,alignItems:"flex-end",flexWrap:"wrap"}}>
           <div style={{flex:"2 1 140px"}}>
-            <label style={s.label}>পণ্য খুঁজুন</label>
-            <div style={{position:"relative"}}>
-              <input
-                placeholder="🔍 পণ্যের নাম লিখুন..."
-                value={item._search||""}
-                onChange={e=>{ upItem(i,"_search",e.target.value); upItem(i,"productId",""); }}
-                style={{width:"100%",boxSizing:"border-box"}}
-              />
-              {item._search && !item.productId && filtered.length>0 && <div style={{position:"absolute",top:"100%",left:0,right:0,background:C.card,border:`1px solid ${C.accent}`,borderRadius:6,zIndex:100,maxHeight:180,overflowY:"auto"}}>
-                {filtered.map(p=><div key={p.id}
-                  onClick={()=>{ upItem(i,"productId",p.id); upItem(i,"_search",p.name); }}
-                  style={{padding:"8px 12px",cursor:"pointer",fontSize:13,borderBottom:`1px solid ${C.border}`}}
-                  onMouseEnter={e=>e.currentTarget.style.background=C.accentDim}
-                  onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                  <b style={{color:C.accent}}>{p.name}</b> <span style={{color:C.muted,fontSize:11}}>স্টক: {p.stock}</span>
-                </div>)}
-              </div>}
-            </div>
+            <label style={s.label}>পণ্য বেছে নিন</label>
+            <select value={item.productId} onChange={e=>upItem(i,"productId",e.target.value)}>
+              <option value="">-- বেছে নিন --</option>
+              {products.filter(p=>p.stock>0).map(p=><option key={p.id} value={p.id}>{p.name} (স্টক:{p.stock})</option>)}
+            </select>
           </div>
           <div style={{flex:"1 1 60px"}}>
             <label style={s.label}>পরিমাণ</label>
@@ -713,8 +697,8 @@ function SalesPage({products,setProducts,sales,setSales}){
               style={{color:C.success}}/>
           </div>
           {items.length>1 && <button style={{...s.btn("danger"),padding:"8px 10px"}} onClick={()=>setItems(items.filter((_,idx)=>idx!==i))}>✕</button>}
-        </div>;
-      })}
+        </div>
+      ))}
       <button style={{...s.btn(),marginBottom:14}} onClick={addItem}>+ আরো পণ্য</button>
       <div style={{background:C.surface,borderRadius:8,padding:14,marginBottom:16}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:C.muted}}>মোট</span><b>{fmt(total)}</b></div>
