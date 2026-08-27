@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0A1628">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="SG Telecom">
 <title>📱 Singapore Telecom ম্যানেজমেন্ট</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
@@ -443,10 +447,10 @@ function StockPage({products,setProducts}){
         updated=[...products,{id:Date.now(),name:form.name,category:form.category,buyPrice:+form.buyPrice,stock:+form.addStock,unit:form.unit}];
       }
     }
-    setProducts(updated); save("products",updated); setShow(false);
+    setProducts(updated); setProducts(updated); setShow(false);
   };
 
-  const del=id=>{ if(!window.confirm("মুছে ফেলবেন?")) return; const u=products.filter(p=>p.id!==id); setProducts(u); save("products",u); };
+  const del=id=>{ if(!window.confirm("মুছে ফেলবেন?")) return; const u=products.filter(p=>p.id!==id); setProducts(u); setProducts(u); };
   const filtered=products.filter(p=>p.name.toLowerCase().includes(search.toLowerCase())||p.category?.toLowerCase().includes(search.toLowerCase()));
   const suggestions=products.filter(p=>form.name&&p.name.toLowerCase().includes(form.name.toLowerCase()));
 
@@ -616,13 +620,14 @@ function SalesPage({products,setProducts,sales,setSales}){
   const upItem=(i,k,v)=>{ const arr=[...items]; arr[i]={...arr[i],[k]:v}; setItems(arr); };
 
   const saveSale=()=>{
-    if(!items[0].productId || !items[0].sellPrice) return;
+    if(items.some(i=>!i.productId||!i.sellPrice)) return alert('সব পণ্যের নাম ও দাম দিন!');
     const upd=[...products];
-    items.forEach(item=>{ const idx=upd.findIndex(p=>p.id===+item.productId); if(idx!==-1) upd[idx]={...upd[idx],stock:upd[idx].stock-+item.qty}; });
-    setProducts(upd); save("products",upd);
+    items.forEach(item=>{ const idx=upd.findIndex(p=>p.id===+item.productId); if(idx!==-1) upd[idx]={...upd[idx],stock:Math.max(0,upd[idx].stock-+item.qty)}; });
+    setProducts(upd);
     const newSales=[...sales,{id:Date.now(),date,type,items:items.map(i=>({productId:+i.productId,qty:+i.qty,price:+i.sellPrice})),total,profit}];
-    setSales(newSales); save("sales",newSales);
+    setSales(newSales);
     setShow(false); setItems([{productId:"",qty:1,sellPrice:""}]);
+    alert('✅ বিক্রয় সফলভাবে সেভ হয়েছে!');
   };
 
   const [search,setSearch]=useState("");
@@ -659,7 +664,7 @@ function SalesPage({products,setProducts,sales,setSales}){
               <td><span style={s.badge(sl.type==="retail"?C.accent:C.warning)}>{sl.type==="retail"?"খুচরা":"পাইকারি"}</span></td>
               <td>{fmt(sl.total)}</td>
               <td><span style={{color:C.success,fontWeight:600}}>+{fmt(sl.profit)}</span></td>
-              <td><button style={{...s.btn("danger"),padding:"4px 8px"}} onClick={()=>{ if(!window.confirm("এই বিক্রয় মুছে ফেলবেন?")) return; const u=sales.filter(x=>x.id!==sl.id); setSales(u); save("sales",u); }}>🗑️</button></td>
+              <td><button style={{...s.btn("danger"),padding:"4px 8px"}} onClick={()=>{ if(!window.confirm("এই বিক্রয় মুছে ফেলবেন?")) return; const u=sales.filter(x=>x.id!==sl.id); setSales(u); setSales(u); }}>🗑️</button></td>
             </tr>
           ))}
         </tbody>
@@ -682,6 +687,19 @@ function SalesPage({products,setProducts,sales,setSales}){
               <option value="">-- বেছে নিন --</option>
               {products.filter(p=>p.stock>0).map(p=><option key={p.id} value={p.id}>{p.name} (স্টক:{p.stock})</option>)}
             </select>
+            <input
+              placeholder="🔍 বা নাম লিখে খুঁজুন..."
+              style={{marginTop:4,width:"100%",boxSizing:"border-box",fontSize:12,padding:"6px 10px"}}
+              onChange={e=>{
+                const val=e.target.value.toLowerCase();
+                if(!val){ upItem(i,"productId",""); return; }
+                const found=products.find(p=>p.name.toLowerCase().includes(val)&&p.stock>0);
+                if(found) upItem(i,"productId",found.id);
+              }}
+            />
+            {item.productId && <div style={{fontSize:11,color:C.success,marginTop:2}}>
+              ✅ {products.find(p=>p.id===+item.productId)?.name}
+            </div>}
           </div>
           <div style={{flex:"1 1 60px"}}>
             <label style={s.label}>পরিমাণ</label>
@@ -725,7 +743,7 @@ function ServicePage({services,setServices,products,setProducts}){
     if(!form.customerName) return;
     const item={...form,charge:+form.charge,cost:+form.cost};
     const updated=edit?services.map(sv=>sv.id===edit.id?{...sv,...item}:sv):[...services,{...item,id:Date.now()}];
-    setServices(updated); save("services",updated);
+    setServices(updated); setServices(updated);
 
     // স্টক থেকে ব্যবহৃত পার্টস বাদ দাও
     if((form.usedParts||[]).length>0){
@@ -737,11 +755,11 @@ function ServicePage({services,setServices,products,setProducts}){
           updatedProducts[idx]={...updatedProducts[idx],stock:Math.max(0,updatedProducts[idx].stock-(+part.qty||1))};
         }
       });
-      setProducts(updatedProducts); save("products",updatedProducts);
+      setProducts(updatedProducts); setProducts(updatedProducts);
     }
     setShow(false);
   };
-  const del=id=>{ if(!window.confirm("মুছে ফেলবেন?")) return; const u=services.filter(sv=>sv.id!==id); setServices(u); save("services",u); };
+  const del=id=>{ if(!window.confirm("মুছে ফেলবেন?")) return; const u=services.filter(sv=>sv.id!==id); setServices(u); setServices(u); };
 
   const stColor={pending:C.warning,"in-progress":C.accent,completed:C.success};
   const stLabel={pending:"অপেক্ষায়","in-progress":"চলছে",completed:"সম্পন্ন"};
@@ -859,10 +877,10 @@ function ExpensePage({expenses,setExpenses}){
   const saveItem=()=>{
     if(!form.amount) return;
     const updated=[...expenses,{...form,id:Date.now(),amount:+form.amount}];
-    setExpenses(updated); save("expenses",updated);
+    setExpenses(updated); setExpenses(updated);
     setForm({date:today(),category:"ভাড়া",amount:"",note:""}); setShow(false);
   };
-  const del=id=>{ if(!window.confirm("মুছে ফেলবেন?")) return; const u=expenses.filter(e=>e.id!==id); setExpenses(u); save("expenses",u); };
+  const del=id=>{ if(!window.confirm("মুছে ফেলবেন?")) return; const u=expenses.filter(e=>e.id!==id); setExpenses(u); setExpenses(u); };
 
   return <div>
     <div style={s.pageTitle}>💸 খরচের হিসাব</div>
