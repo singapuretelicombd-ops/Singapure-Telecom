@@ -110,16 +110,36 @@ function LoginPage(){
         <div style={{color:C.muted,fontSize:13,marginTop:4}}>আপনার অ্যাকাউন্ট বেছে নিন</div>
       </div>
 
-      {!selected && <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-        {branches.map(b=>(
-          <div key={b.email} onClick={()=>selectBranch(b)}
-            style={{background:C.surface,border:`2px solid ${C.border}`,borderRadius:12,padding:"20px 12px",textAlign:"center",cursor:"pointer",transition:"all 0.15s"}}
-            onMouseEnter={e=>{ e.currentTarget.style.borderColor=b.color; e.currentTarget.style.background=b.color+"11"; }}
-            onMouseLeave={e=>{ e.currentTarget.style.borderColor=C.border; e.currentTarget.style.background=C.surface; }}>
-            <div style={{fontSize:36,marginBottom:8}}>{b.icon}</div>
-            <div style={{fontWeight:700,fontSize:14,color:C.text}}>{b.label}</div>
+      {!selected && <div>
+        {/* শাখা সমূহ */}
+        <div style={{color:C.muted,fontSize:12,marginBottom:8,letterSpacing:1}}>🏪 শাখা সমূহ</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+          {branches.filter(b=>!ADMIN_EMAILS.includes(b.email) && b.email!=="robin@sgtelecom.com").map(b=>(
+            <div key={b.email} onClick={()=>selectBranch(b)}
+              style={{background:C.surface,border:`2px solid ${C.border}`,borderRadius:12,padding:"20px 12px",textAlign:"center",cursor:"pointer",transition:"all 0.15s"}}
+              onMouseEnter={e=>{ e.currentTarget.style.borderColor=b.color; e.currentTarget.style.background=b.color+"11"; }}
+              onMouseLeave={e=>{ e.currentTarget.style.borderColor=C.border; e.currentTarget.style.background=C.surface; }}>
+              <div style={{fontSize:36,marginBottom:8}}>{b.icon}</div>
+              <div style={{fontWeight:700,fontSize:14,color:C.text}}>{b.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Robin ও Admin — আলাদা section */}
+        <div style={{borderTop:`1px solid ${C.border}`,paddingTop:14,marginTop:4}}>
+          <div style={{color:C.muted,fontSize:12,marginBottom:8,letterSpacing:1}}>👑 ব্যক্তিগত অ্যাকাউন্ট</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            {branches.filter(b=>b.email==="robin@sgtelecom.com" || ADMIN_EMAILS.includes(b.email)).map(b=>(
+              <div key={b.email} onClick={()=>selectBranch(b)}
+                style={{background:C.surface,border:`2px solid ${C.border}`,borderRadius:12,padding:"14px 12px",textAlign:"center",cursor:"pointer",transition:"all 0.15s"}}
+                onMouseEnter={e=>{ e.currentTarget.style.borderColor=b.color; e.currentTarget.style.background=b.color+"11"; }}
+                onMouseLeave={e=>{ e.currentTarget.style.borderColor=C.border; e.currentTarget.style.background=C.surface; }}>
+                <div style={{fontSize:28,marginBottom:6}}>{b.icon}</div>
+                <div style={{fontWeight:700,fontSize:13,color:b.color}}>{b.label}</div>
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>}
 
       {selected && <div>
@@ -190,7 +210,7 @@ function BranchManager(){
     </div>
 
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:12,marginBottom:20}}>
-      {branches.map(b=>(
+      {branches.filter(b=>!ADMIN_EMAILS.includes(b.email) && b.email!=="robin@sgtelecom.com").map(b=>(
         <div key={b.email} style={{...s.card,textAlign:"center",position:"relative",borderColor:b.color+"55"}}>
           <div style={{fontSize:36,marginBottom:6}}>{b.icon}</div>
           <div style={{fontWeight:700,color:b.color}}>{b.label}</div>
