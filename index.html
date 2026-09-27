@@ -664,7 +664,7 @@ function SalesPage({products,setProducts,sales,setSales}){
               <td><span style={s.badge(sl.type==="retail"?C.accent:C.warning)}>{sl.type==="retail"?"খুচরা":"পাইকারি"}</span></td>
               <td>{fmt(sl.total)}</td>
               <td><span style={{color:C.success,fontWeight:600}}>+{fmt(sl.profit)}</span></td>
-              <td><button style={{...s.btn("danger"),padding:"4px 8px"}} onClick={()=>{ if(!window.confirm("এই বিক্রয় মুছে ফেলবেন?")) return; const u=sales.filter(x=>x.id!==sl.id); setSales(u); setSales(u); }}>🗑️</button></td>
+              <td><button style={{...s.btn("danger"),padding:"4px 8px"}} onClick={()=>{ if(!window.confirm("এই বিক্রয় মুছে ফেলবেন?")) return; const u=sales.filter(x=>x.id!==sl.id); setSales(u); }}>🗑️</button></td>
             </tr>
           ))}
         </tbody>
@@ -743,7 +743,7 @@ function ServicePage({services,setServices,products,setProducts}){
     if(!form.customerName) return;
     const item={...form,charge:+form.charge,cost:+form.cost};
     const updated=edit?services.map(sv=>sv.id===edit.id?{...sv,...item}:sv):[...services,{...item,id:Date.now()}];
-    setServices(updated); setServices(updated);
+    setServices(updated);
 
     // স্টক থেকে ব্যবহৃত পার্টস বাদ দাও
     if((form.usedParts||[]).length>0){
@@ -755,11 +755,11 @@ function ServicePage({services,setServices,products,setProducts}){
           updatedProducts[idx]={...updatedProducts[idx],stock:Math.max(0,updatedProducts[idx].stock-(+part.qty||1))};
         }
       });
-      setProducts(updatedProducts); setProducts(updatedProducts);
+      setProducts(updatedProducts);
     }
     setShow(false);
   };
-  const del=id=>{ if(!window.confirm("মুছে ফেলবেন?")) return; const u=services.filter(sv=>sv.id!==id); setServices(u); setServices(u); };
+  const del=id=>{ if(!window.confirm("মুছে ফেলবেন?")) return; const u=services.filter(sv=>sv.id!==id); setServices(u); };
 
   const stColor={pending:C.warning,"in-progress":C.accent,completed:C.success};
   const stLabel={pending:"অপেক্ষায়","in-progress":"চলছে",completed:"সম্পন্ন"};
@@ -877,10 +877,10 @@ function ExpensePage({expenses,setExpenses}){
   const saveItem=()=>{
     if(!form.amount) return;
     const updated=[...expenses,{...form,id:Date.now(),amount:+form.amount}];
-    setExpenses(updated); setExpenses(updated);
+    setExpenses(updated);
     setForm({date:today(),category:"ভাড়া",amount:"",note:""}); setShow(false);
   };
-  const del=id=>{ if(!window.confirm("মুছে ফেলবেন?")) return; const u=expenses.filter(e=>e.id!==id); setExpenses(u); setExpenses(u); };
+  const del=id=>{ if(!window.confirm("মুছে ফেলবেন?")) return; const u=expenses.filter(e=>e.id!==id); setExpenses(u); };
 
   return <div>
     <div style={s.pageTitle}>💸 খরচের হিসাব</div>
@@ -928,25 +928,64 @@ function ExpensePage({expenses,setExpenses}){
 
 // ── REPORT ────────────────────────────────────────────────
 function ReportPage({sales,services,expenses,products}){
-  const totalSalesIncome=sales.reduce((a,s)=>a+s.total,0);
-  const totalSalesProfit=sales.reduce((a,s)=>a+s.profit,0);
-  const completedSvc=services.filter(s=>s.status==="completed");
+  const now=new Date();
+  const months=[];
+  for(let i=5;i>=0;i--){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    months.push({year:d.getFullYear(),month:d.getMonth(),label:d.toLocaleString("bn-BD",{month:"long",year:"numeric"})});
+  }
+  const [selMonth,setSelMonth]=React.useState(months[months.length-1]);
+  const [view,setView]=React.useState("month"); // "month" | "all"
+
+  const filterByMonth=(arr,key)=>arr.filter(x=>{
+    const d=new Date(x[key]||x.date||x.createdAt||0);
+    return d.getFullYear()===selMonth.year && d.getMonth()===selMonth.month;
+  });
+
+  const activeSales  = view==="month" ? filterByMonth(sales,"date")   : sales;
+  const activeSvc    = view==="month" ? filterByMonth(services,"date") : services;
+  const activeExp    = view==="month" ? filterByMonth(expenses,"date") : expenses;
+
+  const totalSalesIncome=activeSales.reduce((a,s)=>a+s.total,0);
+  const totalSalesProfit=activeSales.reduce((a,s)=>a+s.profit,0);
+  const completedSvc=activeSvc.filter(s=>s.status==="completed");
   const svcIncome=completedSvc.reduce((a,s)=>a+s.charge,0);
   const svcProfit=completedSvc.reduce((a,s)=>a+(s.charge-s.cost),0);
-  const totalExp=expenses.reduce((a,e)=>a+e.amount,0);
+  const totalExp=activeExp.reduce((a,e)=>a+e.amount,0);
   const grossProfit=totalSalesProfit+svcProfit;
   const netProfit=grossProfit-totalExp;
 
   const productSales={};
-  sales.forEach(sl=>sl.items?.forEach(item=>{ productSales[item.productId]=(productSales[item.productId]||0)+item.qty; }));
+  activeSales.forEach(sl=>sl.items?.forEach(item=>{ productSales[item.productId]=(productSales[item.productId]||0)+item.qty; }));
   const topProducts=Object.entries(productSales).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([id,qty])=>({name:products.find(p=>p.id===+id)?.name||"অজানা",qty}));
 
   return <div>
     <div style={s.pageTitle}>📈 লাভ-লোকসান রিপোর্ট</div>
-    <div style={s.pageSub}>সামগ্রিক আর্থিক বিশ্লেষণ</div>
-    <div style={s.card}>
-      <div style={s.secTitle}>💹 আয় ও লাভের সারসংক্ষেপ</div>
-      <table>
+
+    {/* ভিউ toggle */}
+    <div style={{display:"flex",gap:8,marginBottom:12}}>
+      <button onClick={()=>setView("month")} style={{...s.btn(view==="month"?"primary":"ghost"),flex:1,fontSize:13}}>📅 মাস অনুযায়ী</button>
+      <button onClick={()=>setView("all")}   style={{...s.btn(view==="all"  ?"primary":"ghost"),flex:1,fontSize:13}}>📊 সব ডেটা</button>
+    </div>
+
+    {/* মাস সিলেক্টর */}
+    {view==="month" && <div style={{...s.card,padding:"10px 14px",marginBottom:12}}>
+      <div style={{color:C.muted,fontSize:12,marginBottom:6}}>মাস বেছে নিন</div>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+        {months.map(m=>(
+          <button key={m.label} onClick={()=>setSelMonth(m)}
+            style={{padding:"6px 12px",borderRadius:20,border:`1px solid ${selMonth.label===m.label?C.accent:C.border}`,
+              background:selMonth.label===m.label?C.accent+"22":"transparent",
+              color:selMonth.label===m.label?C.accent:C.muted,fontSize:12,cursor:"pointer"}}>
+            {m.label}
+          </button>
+        ))}
+      </div>
+    </div>}
+
+    <div style={{...s.card,borderColor:netProfit>=0?C.success:C.danger}}>
+      <div style={s.secTitle}>{view==="month"?`📅 ${selMonth.label}`:"📊 সামগ্রিক"} — আয় ও লাভের সারসংক্ষেপ</div>
+      <table style={{width:"100%"}}>
         <tbody>
           {[
             ["পার্টস বিক্রয় (মোট আয়)",fmt(totalSalesIncome),C.text],
@@ -959,13 +998,14 @@ function ReportPage({sales,services,expenses,products}){
             ["নিট লাভ/লোকসান",fmt(netProfit),netProfit>=0?C.success:C.danger],
           ].map(([label,val,color])=>(
             <tr key={label}>
-              <td style={{color:C.muted}}>{label}</td>
-              <td style={{color,fontWeight:700,textAlign:"right"}}>{val}</td>
+              <td style={{color:C.muted,paddingBottom:6}}>{label}</td>
+              <td style={{color,fontWeight:700,textAlign:"right",paddingBottom:6}}>{val}</td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
+
     {topProducts.length>0 && <div style={s.card}>
       <div style={s.secTitle}>🏆 সর্বাধিক বিক্রিত পণ্য</div>
       {topProducts.map((p,i)=>(
@@ -977,6 +1017,79 @@ function ReportPage({sales,services,expenses,products}){
       ))}
     </div>}
   </div>;
+}
+
+// ── FLOATING CALCULATOR ───────────────────────────────────
+function FloatingCalculator(){
+  const [open,setOpen]=React.useState(false);
+  const [expr,setExpr]=React.useState("");
+  const [result,setResult]=React.useState("");
+
+  const press=(val)=>{
+    if(val==="C"){setExpr("");setResult("");return;}
+    if(val==="⌫"){setExpr(p=>p.slice(0,-1));return;}
+    if(val==="="){
+      try{
+        const r=Function('"use strict";return ('+expr.replace(/×/g,"*").replace(/÷/g,"/")+')')(  );
+        setResult(String(r));
+      }catch{setResult("Error");}
+      return;
+    }
+    setExpr(p=>p+val);
+    setResult("");
+  };
+
+  const btns=[
+    ["C","⌫","÷","×"],
+    ["7","8","9","-"],
+    ["4","5","6","+"],
+    ["1","2","3","="],
+    ["0",".","",""],
+  ];
+
+  const btnColor=(v)=>{
+    if(v==="=") return C.accent;
+    if(["C","⌫"].includes(v)) return C.danger;
+    if(["÷","×","-","+"].includes(v)) return C.warning;
+    return C.surface;
+  };
+
+  return <>
+    {/* floating button */}
+    <button onClick={()=>setOpen(o=>!o)} style={{
+      position:"fixed",bottom:24,right:20,width:52,height:52,borderRadius:"50%",
+      background:C.accent,border:"none",fontSize:22,cursor:"pointer",
+      boxShadow:"0 4px 16px #00b8d955",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center"
+    }}>🧮</button>
+
+    {open && <div style={{
+      position:"fixed",bottom:84,right:16,width:240,
+      background:C.bg,border:`1px solid ${C.border}`,borderRadius:16,
+      boxShadow:"0 8px 32px #0004",zIndex:1001,padding:12,
+    }}>
+      {/* display */}
+      <div style={{background:C.surface,borderRadius:10,padding:"10px 14px",marginBottom:10,minHeight:54}}>
+        <div style={{color:C.muted,fontSize:13,minHeight:18,wordBreak:"break-all"}}>{expr||"0"}</div>
+        {result && <div style={{color:C.accent,fontSize:20,fontWeight:700,textAlign:"right"}}>{result}</div>}
+      </div>
+      {/* buttons */}
+      {btns.map((row,ri)=>(
+        <div key={ri} style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:6}}>
+          {row.map((b,ci)=>b===""?<div key={ci}/>:
+            <button key={ci} onClick={()=>press(b)} style={{
+              background:btnColor(b),border:"none",borderRadius:8,
+              color:["÷","×","-","+"].includes(b)||b==="="?C.bg:C.text,
+              fontSize:b==="⌫"?14:16,fontWeight:600,padding:"10px 0",cursor:"pointer",
+            }}>{b}</button>
+          )}
+        </div>
+      ))}
+      <button onClick={()=>{setExpr(result||expr);setResult("");}} style={{
+        width:"100%",padding:"8px 0",background:"transparent",border:`1px solid ${C.border}`,
+        borderRadius:8,color:C.muted,fontSize:12,cursor:"pointer",marginTop:2
+      }}>ফলাফল → ইনপুট</button>
+    </div>}
+  </>;
 }
 
 // ── FIX PAGE ─────────────────────────────────────────────
@@ -1193,6 +1306,7 @@ function App(){
     <div id="main" style={{marginLeft:220,padding:28,minHeight:"100vh"}}>
       {renderPage()}
     </div>
+    <FloatingCalculator/>
   </div>;
 }
 
